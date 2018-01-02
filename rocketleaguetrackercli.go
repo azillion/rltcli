@@ -29,7 +29,6 @@ type pageStruct struct {
 
 func main() {
 	// build url
-	fmt.Println(*playlistFlag)
 	base_url = fmt.Sprintf("%s/%s/%d?page=", base_url, VerifyPlatform(*platformFlag), PlaylistStringToInt(*playlistFlag))
 
 	start := time.Now()
