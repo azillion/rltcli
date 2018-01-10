@@ -9,17 +9,22 @@ import (
 	"time"
 )
 
-var platformFlag = flag.String("p", "all", "platform to search\n\t[all] search all platforms\n\t[steam] search Steam\n\t[xbox] search Xbox One\n\t[ps] search PlayStation 4\n\t")
-var playlistFlag = flag.String("q", "3v3", "playlist learderboard to search\n\t[unranked] Un-Ranked\n\t[1v1] Ranked Duel 1v1\n\t[2v2] Ranked Doubles 2v2\n\t[solo] Ranked Solo Standard 3v3\n\t[3v3] Ranked Standard 3v3\n\t")
-var pagesFlag = flag.Int("n", 1, "number of pages to search")
-var displayLeaderboardFlag = flag.Bool("d", false, "Display Leaderboard")
-var regexFlag = flag.String("s", "Squishy", "regex expression to search")
+var platformFlag string
+var playlistFlag string
+var pagesFlag int
+var displayLeaderboardFlag bool
+var regexFlag string
 var regexVal *regexp.Regexp
 var base_url string = "https://rocketleague.tracker.network/ranked-leaderboards"
 
 func init() {
+	flag.StringVar(&platformFlag, "p", "all", "platform to search\n\t[all] search all platforms\n\t[steam] search Steam\n\t[xbox] search Xbox One\n\t[ps] search PlayStation 4\n\t")
+	flag.StringVar(&playlistFlag, "q", "3v3", "playlist learderboard to search\n\t[unranked] Un-Ranked\n\t[1v1] Ranked Duel 1v1\n\t[2v2] Ranked Doubles 2v2\n\t[solo] Ranked Solo Standard 3v3\n\t[3v3] Ranked Standard 3v3\n\t")
+	flag.IntVar(&pagesFlag, "n", 1, "number of pages to search")
+	flag.BoolVar(&displayLeaderboardFlag, "d", false, "Display Leaderboard")
+	flag.StringVar(&regexFlag, "s", "Squishy", "regex expression to search")
 	flag.Parse()
-	regexVal = regexp.MustCompile(*regexFlag)
+	regexVal = regexp.MustCompile(regexFlag)
 }
 
 type pageStruct struct {
@@ -29,20 +34,20 @@ type pageStruct struct {
 
 func main() {
 	// build url
-	base_url = fmt.Sprintf("%s/%s/%d?page=", base_url, VerifyPlatform(*platformFlag), PlaylistStringToInt(*playlistFlag))
+	base_url = fmt.Sprintf("%s/%s/%d?page=", base_url, VerifyPlatform(platformFlag), PlaylistStringToInt(playlistFlag))
 
 	start := time.Now()
 	ch := make(chan pageStruct, 10)
 	urls := make(map[int]string)
 
-	for page := 1; page < *pagesFlag+1; page++ {
+	for page := 1; page < pagesFlag+1; page++ {
 		url := fmt.Sprintf("%s%d", base_url, page)
 		urls[page-1] = url
 		// gocurrency in action
 		go fetch(url, page, ch)
 	}
 
-	if *displayLeaderboardFlag == true {
+	if displayLeaderboardFlag == true {
 		pageResults := make(map[int]string)
 		// intentionally blocking
 		for range urls {
@@ -123,7 +128,7 @@ func parse(doc *goquery.Document) ([]string, error) {
 		}
 
 		if position != "" && username != "" && userURL != "" && rating != "" && gamesAmt != "" {
-			if *displayLeaderboardFlag == true || regexVal.MatchString(username) {
+			if displayLeaderboardFlag == true || regexVal.MatchString(username) {
 				result := fmt.Sprintf("%s | %s | %s | %s | %s\n", position, username, userURL, rating, gamesAmt)
 				parsedResults = append(parsedResults, result)
 			}
