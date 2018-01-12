@@ -1,4 +1,4 @@
-# rocket-league-tracker-cli
+# rltcli
 A CLI to display and search Rocket League Tracker Network's Ranked Leaderboards
 
 ```bash
