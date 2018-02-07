@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/ryanuber/columnize"
+	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
@@ -105,7 +106,8 @@ func main() {
 		go fetch(url, page, ch)
 
 		// be a polite internet citizen
-		time.Sleep(time.Millisecond * 200)
+		sleepTime := time.Duration(rand.Intn(400) + 200)
+		time.Sleep(time.Millisecond * sleepTime)
 	}
 
 	if displayLeaderboardFlag == true {
@@ -120,16 +122,22 @@ func main() {
 			}
 		}
 		if len(pageResults) > 0 {
-			for i, result := range pageResults {
-				fmt.Printf("%s\n\n", i+1, result)
+			for pageNum, result := range pageResults {
+				pageNum++
+				fmt.Printf("Page %d\nURL  %s%d\n", pageNum, base_url, pageNum)
+				fmt.Printf("%s\n\n", result)
 			}
 		}
 	} else {
-		for range urls {
+		for pageNum, _ := range urls {
+			pageNum++
 			result := <-ch
-			if result.err != nil {
+			if result.err != nil && result.err.Error() != "Page Empty" {
 				fmt.Println(result.err)
 			} else {
+				if len(result.rows) > 0 {
+					fmt.Printf("Page %d\nURL  %s%d\n", pageNum, base_url, pageNum)
+				}
 				fmt.Print(result.ToString())
 			}
 		}
@@ -138,7 +146,6 @@ func main() {
 }
 
 func fetch(url string, page int, ch chan<- LeaderboardPage) {
-	fmt.Printf("Page %d\nURL  %s\n", page, url)
 	chr := make(chan LeaderboardRow, 10)
 
 	doc, err := goquery.NewDocument(url)
@@ -174,15 +181,25 @@ func fetch(url string, page int, ch chan<- LeaderboardPage) {
 	})
 
 	leaderboardPage := make([]LeaderboardRow, count)
+	pageEmptyFlag := true
 	for range leaderboardPage {
 		leaderboardRow := <-chr
 		// if leaderboardRow.err != nil {
 		// 	fmt.Println(leaderboardRow.err)
 		// }
-		leaderboardPage[leaderboardRow.pagePosition] = leaderboardRow
+		if leaderboardRow.err == nil {
+			pageEmptyFlag = false
+			leaderboardPage[leaderboardRow.pagePosition] = leaderboardRow
+		}
 	}
-
-	ch <- LeaderboardPage{page, leaderboardPage, nil}
+	var pageErr error
+	if pageEmptyFlag == true && displayLeaderboardFlag == true {
+		pageErr = fmt.Errorf("Empty Page", nil)
+	}
+	// if pageEmptyFlag == false {
+	// 	fmt.Printf("Page %d\nURL  %s\n", page, url)
+	// }
+	ch <- LeaderboardPage{page, leaderboardPage, pageErr}
 	return
 }
 
